@@ -399,10 +399,7 @@ class TracIniAdminPanel(Component):
     return sections
     
   def _read_section_config(self, req, section_name, default_values, custom_options = None):
-    options = {}
-    section_default_values = default_values.get(section_name, None)
-
-    for option_name, stored_value in self.config.options(section_name):
+    def _assemble_option(option_name, stored_value):
       option = self._gather_option_data(req, section_name, option_name, section_default_values)
       stored_value = self._convert_value(stored_value, option['option_info'])
 
@@ -413,7 +410,12 @@ class TracIniAdminPanel(Component):
         option['value'] = stored_value
       
       option['stored_value'] = stored_value
-      options[option_name] = option
+    
+    options = {}
+    section_default_values = default_values.get(section_name, None)
+
+    for option_name, stored_value in self.config.options(section_name):
+      options[option_name] = _assemble_option(option_name, stored_value)
       
     if custom_options is None:
       custom_options = self._get_session_custom_options(req, section_name)
@@ -423,17 +425,7 @@ class TracIniAdminPanel(Component):
         if option_name in options:
           continue
         
-        option = self._gather_option_data(req, section_name, option_name, section_default_values)
-        stored_value = self._convert_value(stored_value, option['option_info'])
-
-        does_exist, value = self._get_session_value(req, section_name, option_name)
-        if does_exist:
-          option['value'] = value
-        else:
-          option['value'] = stored_value
-        
-        option['stored_value'] = stored_value
-        options[option_name] = option
+        options[option_name] = _assemble_option(option_name, None)
       
     return options
     
