@@ -417,22 +417,23 @@ class TracIniAdminPanel(Component):
       
     if custom_options is None:
       custom_options = self._get_session_custom_options(req, section_name)
-      
-    for option_name in custom_options[section_name].keys():
-      if option_name in options:
-        continue
-      
-      option = self._gather_option_data(req, section_name, option_name, section_default_values)
-      stored_value = self._convert_value(stored_value, option['option_info'])
+    
+    if section_name in custom_options:
+      for option_name in custom_options[section_name].keys():
+        if option_name in options:
+          continue
+        
+        option = self._gather_option_data(req, section_name, option_name, section_default_values)
+        stored_value = self._convert_value(stored_value, option['option_info'])
 
-      does_exist, value = self._get_session_value(req, section_name, option_name)
-      if does_exist:
-        option['value'] = value
-      else:
-        option['value'] = stored_value
-      
-      option['stored_value'] = stored_value
-      options[option_name] = option
+        does_exist, value = self._get_session_value(req, section_name, option_name)
+        if does_exist:
+          option['value'] = value
+        else:
+          option['value'] = stored_value
+        
+        option['stored_value'] = stored_value
+        options[option_name] = option
       
     return options
     
