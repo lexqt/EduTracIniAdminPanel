@@ -163,6 +163,8 @@ $(document).ready(function(){
     cur_focused_field.val($(this).attr('name'));
   });
   
+  // Same trigger. NOTE: We can't use "click" here as this is also triggered
+  // when hitting return. We need to use "focus" here.
   settings_list.find(':submit').focus(function() {
     cur_focused_field.val('');
   });
@@ -221,7 +223,6 @@ $(document).ready(function(){
       return false;
     }
     
-    $(this).find(':submit').attr('disabled', true); 
     return true;
   });
 });

@@ -240,6 +240,9 @@ class TracIniAdminPanel(Component):
         
         #
         # Identify submit type
+        # NOTE: Using "cur_focused_field" is a hack to support hitting the 
+        #  return key even for the new-options field. Without this hitting 
+        #  return would always associated to the apply button.
         #
         submit_type = None
         cur_focused_field = req.args.get('inieditor_cur_focused_field', '')
@@ -362,6 +365,9 @@ class TracIniAdminPanel(Component):
     return 'admin_tracini.html', data
     
   def _get_session_value(self, req, section_name, option_name):
+    """ Returns the value for an unsaved option stored in the current session,
+        if it exists. Values get removed here when they're saved/applied.
+    """
     name = 'inieditor|%s|%s' % (section_name, option_name)
     if name in req.session:
       return True, req.session[name]
@@ -369,19 +375,29 @@ class TracIniAdminPanel(Component):
       return False, None
     
   def _set_session_value(self, req, section_name, option_name, option_value):
+    """ Stores the value of an unsaved option in the current session. """
     name = 'inieditor|%s|%s' % (section_name, option_name)
     req.session[name] = option_value
       
   def _remove_session_value(self, req, section_name, option_name):
+    """ Removes the value of an unsaved option from the current session. """
     name = 'inieditor|%s|%s' % (section_name, option_name)
     if name in req.session:
       del req.session[name]
       
   def _add_session_custom_option(self, req, section_name, option_name):
+    """ Used to remember a custom (new) option which isn't backed by 
+        "Option.registry". Without storing it here, such options would be
+        lost when using "req.redirect()".
+    """
     name = 'inieditor-custom|%s|%s' % (section_name, option_name)
     req.session[name] = True
     
   def _get_session_custom_options(self, req, filter_section_name = None):
+    """ Retrieves the remembered custom (new) options. If "filter_section_name"
+        is None, the options for all sections will be returned. Otherwise only
+        the options for the specified section will be returned.
+    """
     sections = { }
     for item_name in req.session.keys():
       if not item_name.startswith('inieditor-custom|'):
@@ -405,6 +421,10 @@ class TracIniAdminPanel(Component):
     return sections
     
   def _read_section_config(self, req, section_name, default_values, custom_options = None):
+    """ Gathers all existing information about the specified section. Retrieves
+        this information from "self.config" (stored options and options from the
+        registry) and from the session (new, custom options).
+    """
     def _assemble_option(option_name, stored_value):
       option = self._gather_option_data(req, section_name, option_name, section_default_values)
       stored_value = self._convert_value(stored_value, option['option_info'])
