@@ -162,10 +162,11 @@ class TracIniAdminPanel(Component):
       #   be on the safe site.
       if path_info == '_all_sections':
         # All sections
+        custom_options = self._get_session_custom_options(req)
         for section_name in self.config.sections():
           if section_name == 'components':
             continue
-          sections[section_name] = self._read_section_config(req, section_name, default_values)
+          sections[section_name] = self._read_section_config(req, section_name, default_values, custom_options)
       else:
         # Only a single section
         # Note: At this point path_info has already been verified to contain a 
@@ -304,8 +305,7 @@ class TracIniAdminPanel(Component):
               add_warning(req, 'The new option "' + new_option_name + '" could not be added due to security restrictions.')
               continue
             
-            #section[new_option_name] = new_option
-            self._set_session_value(req, section_name, new_option_name, None)
+            self._add_session_custom_option(req, section_name, new_option_name)
             field_added = True
           
           if field_added:
@@ -356,26 +356,72 @@ class TracIniAdminPanel(Component):
     return 'admin_tracini.html', data
     
   def _get_session_value(self, req, section_name, option_name):
-    name = 'inieditor.%s.%s' % (section_name, option_name)
+    name = 'inieditor|%s|%s' % (section_name, option_name)
     if name in req.session:
       return True, req.session[name]
     else:
       return False, None
     
   def _set_session_value(self, req, section_name, option_name, option_value):
-    name = 'inieditor.%s.%s' % (section_name, option_name)
+    name = 'inieditor|%s|%s' % (section_name, option_name)
     req.session[name] = option_value
       
   def _remove_session_value(self, req, section_name, option_name):
-    name = 'inieditor.%s.%s' % (section_name, option_name)
+    name = 'inieditor|%s|%s' % (section_name, option_name)
     if name in req.session:
       del req.session[name]
+      
+  def _add_session_custom_option(self, req, section_name, option_name):
+    name = 'inieditor-custom|%s|%s' % (section_name, option_name)
+    req.session[name] = True
     
-  def _read_section_config(self, req, section_name, default_values):
+  def _get_session_custom_options(self, req, filter_section_name = None):
+    sections = { }
+    for item_name in req.session.keys():
+      if not item_name.startswith('inieditor-custom|'):
+        continue
+        
+      parts = item_name.split('|', 3)
+      if len(parts) < 3:
+        continue
+        
+      section_name = parts[1]
+      option_name = parts[2]
+      
+      if filter_section_name is not None and section_name != filter_section_name:
+        continue
+        
+      if section_name in sections:
+        sections[section_name][option_name] = True
+      else:
+        sections[section_name] = { option_name: True }
+        
+    return sections
+    
+  def _read_section_config(self, req, section_name, default_values, custom_options = None):
     options = {}
     section_default_values = default_values.get(section_name, None)
 
     for option_name, stored_value in self.config.options(section_name):
+      option = self._gather_option_data(req, section_name, option_name, section_default_values)
+      stored_value = self._convert_value(stored_value, option['option_info'])
+
+      does_exist, value = self._get_session_value(req, section_name, option_name)
+      if does_exist:
+        option['value'] = value
+      else:
+        option['value'] = stored_value
+      
+      option['stored_value'] = stored_value
+      options[option_name] = option
+      
+    if custom_options is None:
+      custom_options = self._get_session_custom_options(req, section_name)
+      
+    for option_name in custom_options[section_name].keys():
+      if option_name in options:
+        continue
+      
       option = self._gather_option_data(req, section_name, option_name, section_default_values)
       stored_value = self._convert_value(stored_value, option['option_info'])
 
@@ -419,6 +465,7 @@ class TracIniAdminPanel(Component):
     else:
       option_desc = None
       option_type = 'text'
+      self._add_session_custom_option(req, section_name, option_name)   
       
     # See "IniEditorBasicSecurityManager" for why we use a pipe char here.
     if ('%s|%s' % (section_name, option_name)) in self.password_options_set:
@@ -449,10 +496,7 @@ class TracIniAdminPanel(Component):
       value = option['default_value']
     
     option['value'] = value
-    # Only remove the value from the session if it has the same value as the
-    # stored value, but only if the option is in the option registry. This
-    # way we won't lose newly added options. 
-    if value != option['stored_value'] or option['option_info'] is None:
+    if value != option['stored_value']:
       self._set_session_value(req, section_name, option_name, value)
     else:
       self._remove_session_value(req, section_name, option_name)
