@@ -10,7 +10,7 @@ PACKAGE = 'inieditorpanel'
 
 setup(
     name = 'TracIniAdminPanel',
-    version = '0.8beta',
+    version = '0.81beta',
     
     author = "Sebastian Krysmanski",
     author_email = None,
