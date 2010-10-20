@@ -356,7 +356,11 @@ class TracIniAdminPanel(Component):
     return 'admin_tracini.html', data
     
   def _get_session_value(self, req, section_name, option_name):
-    return req.session.get('inieditor.%s.%s' % (section_name, option_name), None)
+    name = 'inieditor.%s.%s' % (section_name, option_name)
+    if name in req.session:
+      return True, req.session[name]
+    else:
+      return False, None
     
   def _set_session_value(self, req, section_name, option_name, option_value):
     name = 'inieditor.%s.%s' % (section_name, option_name)
@@ -375,11 +379,11 @@ class TracIniAdminPanel(Component):
       option = self._gather_option_data(req, section_name, option_name, section_default_values)
       stored_value = self._convert_value(stored_value, option['option_info'])
 
-      value = self._get_session_value(req, section_name, option_name)
-      if value is None:
-        option['value'] = stored_value
-      else:
+      does_exist, value = self._get_session_value(req, section_name, option_name)
+      if does_exist:
         option['value'] = value
+      else:
+        option['value'] = stored_value
       
       option['stored_value'] = stored_value
       options[option_name] = option
