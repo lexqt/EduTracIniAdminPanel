@@ -420,6 +420,11 @@ class TracIniAdminPanel(Component):
         
     return sections
     
+  def _remove_session_custom_option(self, req, section_name, option_name):
+    name = 'inieditor-custom|%s|%s' % (section_name, option_name)
+    if name in req.session:
+      del req.session[name]
+    
   def _read_section_config(self, req, section_name, default_values, custom_options = None):
     """ Gathers all existing information about the specified section. Retrieves
         this information from "self.config" (stored options and options from the
@@ -595,6 +600,7 @@ class TracIniAdminPanel(Component):
     for option_name, option in options.items():
       option['value'] = option['stored_value']
       self._remove_session_value(req, section_name, option_name)
+      self._remove_session_custom_option(req, section_name, option_name)
 
   #
   # ITemplateProvider methods

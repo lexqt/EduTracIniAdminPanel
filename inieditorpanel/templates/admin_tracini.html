@@ -131,7 +131,7 @@
                 </tr>
                 <tr py:if="option.option_info is None" class="collapsible-${section_name} editor-note">
                   <td colspan="3">
-                    <b>Note:</b> This option will be <b>completely deleted</b> if it's set to its default value. 
+                    <b>Note:</b> This option is a <b>custom option</b>. It will be <b>completely deleted</b> if it's set to its default value. 
                     To keep it you need to assign a (non-empty) value to it.
                   </td>
                 </tr>
@@ -180,7 +180,7 @@
             <tr class="collapsible-${section_name}">
               <td colspan="3">
                 <input type="submit" name="inieditor-submit-apply-${section_name}" value="${_('Apply changes')}" title="Applies the changes from this section."/>
-                <input type="submit" name="inieditor-submit-discard-${section_name}" value="${_('Discard changes')}" title="Discards the changes from this section."/>
+                <input type="submit" name="inieditor-submit-discard-${section_name}" value="${_('Discard changes')}" title="Discards the changes from this section. Also removes custom options, if they still have their default value."/>
                 <span class="option-modify-section">
                   <input name="new-options-${section_name}" size="70" title="Options to be added to this section; comma-separated"/>
                   <input type="submit" name="inieditor-submit-addnewoptions-${section_name}" value="Add options" title="Adds the specified options to this section"/>
