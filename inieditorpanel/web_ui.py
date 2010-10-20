@@ -410,6 +410,7 @@ class TracIniAdminPanel(Component):
         option['value'] = stored_value
       
       option['stored_value'] = stored_value
+      return option
     
     options = {}
     section_default_values = default_values.get(section_name, None)
