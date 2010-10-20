@@ -65,10 +65,10 @@ function check_for_changes() {
 }
 
 $(document).ready(function(){
-  settings_list = $('#ini_settings_list'); // global var
+  settings_list = $('#settings_table'); // global var
   section_counters = new Object();
   section_names = new Array();
-  cur_focused_field = settings_list.find('input[name=inieditor_cur_focused_field]');
+  cur_focused_field = settings_list.find('input[name="inieditor_cur_focused_field"]');
   
   load_data(section_counters, settings_stored_values);
 
@@ -163,7 +163,7 @@ $(document).ready(function(){
     cur_focused_field.val($(this).attr('name'));
   });
   
-  settings_list.find(':submit').click(function() {
+  settings_list.find(':submit').focus(function() {
     cur_focused_field.val('');
   });
   
