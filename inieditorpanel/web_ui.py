@@ -304,7 +304,8 @@ class TracIniAdminPanel(Component):
               add_warning(req, 'The new option "' + new_option_name + '" could not be added due to security restrictions.')
               continue
             
-            section[new_option_name] = new_option
+            #section[new_option_name] = new_option
+            self._set_session_value(req, section_name, new_option_name, None)
             field_added = True
           
           if field_added:
@@ -359,11 +360,12 @@ class TracIniAdminPanel(Component):
     
   def _set_session_value(self, req, section_name, option_name, option_value):
     name = 'inieditor.%s.%s' % (section_name, option_name)
-    if option_value is None:
-      if name in req.session:
-        del req.session[name]
-    else:
-      req.session[name] = option_value
+    req.session[name] = option_value
+      
+  def _remove_session_value(self, req, section_name, option_name):
+    name = 'inieditor.%s.%s' % (section_name, option_name)
+    if name in req.session:
+      del req.session[name]
     
   def _read_section_config(self, req, section_name, default_values):
     options = {}
@@ -446,7 +448,7 @@ class TracIniAdminPanel(Component):
     if value != option['stored_value']:
       self._set_session_value(req, section_name, option_name, value)
     else:
-      self._set_session_value(req, section_name, option_name, None)
+      self._remove_session_value(req, section_name, option_name)
 
       
   def _check_option_access(self, section_name, option_name):
@@ -464,7 +466,7 @@ class TracIniAdminPanel(Component):
     for option_name, option in options.items():
       if option['access'] != ACCESS_MODIFIABLE:
         # Simply ignore options we don't have access to.
-        self._set_session_value(req, section_name, option_name, None) # remove if exists
+        self._remove_session_value(req, section_name, option_name) # remove if exists
         continue
       
       if option['value'] == option['default_value']:
@@ -512,7 +514,7 @@ class TracIniAdminPanel(Component):
       option['stored_value'] = option['value']
       
       # Remove applied value 
-      self._set_session_value(req, section_name, option_name, None)
+      self._remove_session_value(req, section_name, option_name)
       
       values_applied = True
       
@@ -522,7 +524,7 @@ class TracIniAdminPanel(Component):
   def _discard_section_changes(self, req, section_name, options):
     for option_name, option in options.items():
       option['value'] = option['stored_value']
-      self._set_session_value(req, section_name, option_name, None)
+      self._remove_session_value(req, section_name, option_name)
 
   #
   # ITemplateProvider methods
