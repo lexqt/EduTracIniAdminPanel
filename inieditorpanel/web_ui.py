@@ -449,7 +449,10 @@ class TracIniAdminPanel(Component):
       value = option['default_value']
     
     option['value'] = value
-    if value != option['stored_value']:
+    # Only remove the value from the session if it has the same value as the
+    # stored value, but only if the option is in the option registry. This
+    # way we won't lose newly added options. 
+    if value != option['stored_value'] or option['option_info'] is None:
       self._set_session_value(req, section_name, option_name, value)
     else:
       self._remove_session_value(req, section_name, option_name)
