@@ -68,6 +68,7 @@ $(document).ready(function(){
   settings_list = $('#ini_settings_list'); // global var
   section_counters = new Object();
   section_names = new Array();
+  cur_focused_field = settings_list.find('input[name=inieditor_cur_focused_field]');
   
   load_data(section_counters, settings_stored_values);
 
@@ -147,7 +148,23 @@ $(document).ready(function(){
           }
         }
       });
+      
+      // Add trigger to notify about the currently focused field type; used to
+      // determine the pressed submit button when hitting return
+      input_field.focus(function() {
+        cur_focused_field.val('option-value-' + section_name);
+      });
     }    
+  });
+  
+  // Add trigger to notify about the currently focused field type; used to
+  // determine the pressed submit button when hitting return
+  settings_list.find('input[name^="new-options-"]').focus(function() {
+    cur_focused_field.val($(this).attr('name'));
+  });
+  
+  settings_list.find(':submit').click(function() {
+    cur_focused_field.val('');
   });
   
   // Register click listener for expanding/collpasing sections.

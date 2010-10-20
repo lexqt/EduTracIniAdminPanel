@@ -52,6 +52,9 @@
     
     <div id="settings_table" py:if="len(sections) != 0">
     <form method="post" action="">
+      <!--! This field is used to enable auto detection which submit button
+            was meant to be used. Works only with JavaScript enabled. -->
+      <input type="hidden" name="inieditor_cur_focused_field" value=""/>
       <table class="listing" id="ini_settings_list">
         <thead>
           <tr>

@@ -242,12 +242,18 @@ class TracIniAdminPanel(Component):
         # Identify submit type
         #
         submit_type = None
-        for key in req.args:
-          if not key.startswith('inieditor-submit-'):
-            continue
-            
-          submit_type = key[len('inieditor-submit-'):]
-          break
+        cur_focused_field = req.args.get('inieditor_cur_focused_field', '')
+        if cur_focused_field.startswith('option-value-'):
+          submit_type = 'apply-' + cur_focused_field[len('option-value-'):]
+        elif cur_focused_field.startswith('new-options-'):
+          submit_type = 'addnewoptions-' + cur_focused_field[len('new-options-'):]
+        else:
+          for key in req.args:
+            if not key.startswith('inieditor-submit-'):
+              continue
+              
+            submit_type = key[len('inieditor-submit-'):]
+            break
         
        
         if submit_type.startswith('apply'): # apply changes
