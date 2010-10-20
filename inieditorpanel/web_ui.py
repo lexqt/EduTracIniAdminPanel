@@ -459,7 +459,6 @@ class TracIniAdminPanel(Component):
     else:
       option_desc = None
       option_type = 'text'
-      self._add_session_custom_option(req, section_name, option_name)   
       
     # See "IniEditorBasicSecurityManager" for why we use a pipe char here.
     if ('%s|%s' % (section_name, option_name)) in self.password_options_set:
