@@ -107,7 +107,7 @@ class TracIniAdminPanel(Component):
     manager = None
     try:
       manager = self.security_manager
-    except Exception as detail:
+    except Exception, detail:  # "except ... as ..." is only available since Python 2.6
       if req.method != 'POST':
         # only add this warning once
         add_warning(req, 'Security manager could not be initated. ' + unicode(detail))
