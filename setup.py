@@ -5,12 +5,15 @@ from setuptools import setup
 #   will have to be redeployed (using the previously mentioned command). See:
 #   https://svn.mayastudios.de/mtpp/wiki/TracSandbox#Deployingaself-developedplugin
 
+# Minor changes to support admin areas and syllabus configs in EduTrac
+# (C) 2012 Aleksey A. Porfirov
+
 # Name of the python package
 PACKAGE = 'inieditorpanel'
 
 setup(
-    name = 'TracIniAdminPanel',
-    version = '0.81beta',
+    name = 'EduTracIniAdminPanel',
+    version = '0.81e',
     
     author = "Sebastian Krysmanski",
     author_email = None,

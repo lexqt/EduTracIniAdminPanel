@@ -4,7 +4,7 @@ import copy
 from trac.core import *
 from trac.config import Option, ListOption, ExtensionOption, _TRUE_VALUES
 from trac.web.chrome import ITemplateProvider, add_stylesheet, add_script, add_notice, add_warning
-from trac.admin.api import IAdminPanelProvider
+from trac.admin.api import IAdminPanelProvider, AdminArea
 from trac.util.translation import _
 from trac.wiki.formatter import format_to_oneliner
 from trac.mimeview.api import Context
@@ -65,16 +65,22 @@ class TracIniAdminPanel(Component):
 
   def get_admin_panels(self, req):
     if 'TRAC_ADMIN' in req.perm:
-      yield ('general', _('General'), 'trac_ini_editor', _('trac.ini Editor'))
+      yield ('general', _('General'), 'trac_ini_editor', _('trac.ini Editor'),
+             set([AdminArea.GLOBAL, AdminArea.SYLLABUS]))
 
-  def render_admin_panel(self, req, cat, page, path_info):  
+  def render_admin_panel(self, req, cat, page, path_info, area, area_id):  
     req.perm.require('TRAC_ADMIN')
-    
+    if area == AdminArea.GLOBAL:
+        config = self.config
+        syllabus_only = False
+    elif area == AdminArea.SYLLABUS:
+        config = self.configs.syllabus(area_id)
+        syllabus_only = True
     #
     # Gather section names for section drop down field
     #
     all_section_names = [ ]
-    for section_name in self.config.sections():
+    for section_name in config.sections():
       if section_name == 'components':
         continue
       all_section_names.append(section_name)
@@ -85,11 +91,11 @@ class TracIniAdminPanel(Component):
        and (path_info not in all_section_names):
       if path_info == 'components':
         add_warning(req, 'The section "component" can\'t be edited with the ini editor.')
-        req.redirect(req.href.admin(cat, page))
+        req.redirect(req.panel_href())
         return None
       elif self.valid_section_name_chars_regexp.match(path_info) is None:
         add_warning(req, 'The section name "' + path_info + '" is invalid.')
-        req.redirect(req.href.admin(cat, page))
+        req.redirect(req.panel_href())
         return None
         
       # Add current section if it's not already in the list. This happens if
@@ -117,14 +123,14 @@ class TracIniAdminPanel(Component):
       # Security manager is not available
       #
       if req.method == 'POST':
-        req.redirect(req.href.admin(cat, page) + '/' + path_info)
+        req.redirect(req.panel_href() + '/' + path_info)
         return None
 
     elif req.method == 'POST' and 'change-section' in req.args:
       # 
       # Changing the section
       #
-      req.redirect(req.href.admin(cat, page) + '/' + req.args['change-section'])
+      req.redirect(req.panel_href() + '/' + req.args['change-section'])
       return None
         
     elif req.method == 'POST' and 'new-section-name' in req.args:
@@ -135,19 +141,19 @@ class TracIniAdminPanel(Component):
       
       if section_name == '':
         add_warning(req, _('The section name was empty.'))
-        req.redirect(req.href.admin(cat, page) + '/' + path_info)
+        req.redirect(req.panel_href() + '/' + path_info)
       elif section_name == 'components':
         add_warning(req, 'The section "component" can\'t be edited with the ini editor.')
-        req.redirect(req.href.admin(cat, page))
+        req.redirect(req.panel_href())
       elif self.valid_section_name_chars_regexp.match(section_name) is None:
         add_warning(req, 'The section name "' + section_name + '" is invalid.')
-        req.redirect(req.href.admin(cat, page) + '/' + path_info)
+        req.redirect(req.panel_href() + '/' + path_info)
       else:
         if section_name not in all_section_names:
           add_notice(req, _('Section "' + section_name + '" has been created. Note that you need to add at least one option to store it permanently.'))
         else:
           add_warning(req, _('The section already exists.'))
-        req.redirect(req.href.admin(cat, page) + '/' + section_name)
+        req.redirect(req.panel_href() + '/' + section_name)
       
       return None
     
@@ -155,7 +161,7 @@ class TracIniAdminPanel(Component):
       #
       # Display and possibly modify section (if one is selected)
       #
-      default_values = self.config.defaults()
+      default_values = config.defaults()
       
       # Gather option values
       # NOTE: This needs to be done regardless whether we have POST data just to
@@ -163,15 +169,17 @@ class TracIniAdminPanel(Component):
       if path_info == '_all_sections':
         # All sections
         custom_options = self._get_session_custom_options(req)
-        for section_name in self.config.sections():
+        for section_name in config.sections():
           if section_name == 'components':
             continue
-          sections[section_name] = self._read_section_config(req, section_name, default_values, custom_options)
+          sections[section_name] = self._read_section_config(req, config, section_name, default_values,
+                                                             custom_options, syllabus_only=syllabus_only)
       else:
         # Only a single section
         # Note: At this point path_info has already been verified to contain a 
         #   valid section name (see check above).
-        sections[path_info] = self._read_section_config(req, path_info, default_values)
+        sections[path_info] = self._read_section_config(req, config, path_info, default_values,
+                                                        syllabus_only=syllabus_only)
       
 
       #
@@ -263,21 +271,21 @@ class TracIniAdminPanel(Component):
           if submit_type.startswith('apply-'):
             # apply only one section
             section_name = submit_type[len('apply-'):].strip()
-            if self._apply_section_changes(req, section_name, sections[section_name]):
+            if self._apply_section_changes(req, config, section_name, sections[section_name]):
               add_notice(req, _('Changes for section "' + section_name + '" have been applied.'))
-              self.config.save()
+              config.save()
             else:
               add_warning(req, _('No changes have been applied.'))
           else:
             # apply all sections
             changes_applied = False
             for section_name, options in sections.items():
-              if self._apply_section_changes(req, section_name, options):
+              if self._apply_section_changes(req, config, section_name, options):
                 changes_applied = True
             
             if changes_applied:
               add_notice(req, _('Changes have been applied.'))
-              self.config.save()
+              config.save()
             else:
               add_warning(req, _('No changes have been applied.'))
 
@@ -322,7 +330,7 @@ class TracIniAdminPanel(Component):
           else:
             add_warning(req, _('No new fields have been added.'))
         
-        req.redirect(req.href.admin(cat, page) + '/' + path_info)
+        req.redirect(req.panel_href() + '/' + path_info)
         return None
     
     # Split sections dict for faster template rendering
@@ -425,10 +433,12 @@ class TracIniAdminPanel(Component):
     if name in req.session:
       del req.session[name]
     
-  def _read_section_config(self, req, section_name, default_values, custom_options = None):
+  def _read_section_config(self, req, config, section_name, default_values, custom_options=None, syllabus_only=False):
     """ Gathers all existing information about the specified section. Retrieves
-        this information from "self.config" (stored options and options from the
+        this information from `config` (stored options and options from the
         registry) and from the session (new, custom options).
+        If `syllabus_only` is True, skip options from global trac.ini without switcher
+        (still include custom options).
     """
     def _assemble_option(option_name, stored_value):
       option = self._gather_option_data(req, section_name, option_name, section_default_values)
@@ -446,9 +456,16 @@ class TracIniAdminPanel(Component):
     options = {}
     section_default_values = default_values.get(section_name, None)
 
-    for option_name, stored_value in self.config.options(section_name):
-      options[option_name] = _assemble_option(option_name, stored_value)
-      
+    if syllabus_only:
+      for option_name, stored_value in config.options(section_name, inherit=False):
+        opt = _assemble_option(option_name, stored_value)
+        if not opt['switcher'] and not opt['custom']:
+          continue
+        options[option_name] = opt
+    else:
+      for option_name, stored_value in config.options(section_name):
+        options[option_name] = _assemble_option(option_name, stored_value)
+
     if custom_options is None:
       custom_options = self._get_session_custom_options(req, section_name)
     
@@ -487,9 +504,13 @@ class TracIniAdminPanel(Component):
       option = Option.registry[(section_name, option_name)]
       option_desc = format_to_oneliner(self.env, Context.from_request(req), option.__doc__)      
       option_type = option.__class__.__name__.lower()[:-6] or 'text'
+      custom = False
+      switcher = option.switcher
     else:
       option_desc = None
       option_type = 'text'
+      custom = True
+      switcher = False
       
     # See "IniEditorBasicSecurityManager" for why we use a pipe char here.
     if ('%s|%s' % (section_name, option_name)) in self.password_options_set:
@@ -501,7 +522,8 @@ class TracIniAdminPanel(Component):
       default_value = ''
       
     return { 'default_value': default_value, 'desc': option_desc, 'type': option_type, 
-             'option_info': option, 'access': self._check_option_access(section_name, option_name) }
+             'option_info': option, 'access': self._check_option_access(section_name, option_name),
+             'custom': custom, 'switcher': switcher }
 
   def _create_new_field_instance(self, req, section_name, option_name, section_default_values, value = None):    
     option = self._gather_option_data(req, section_name, option_name, section_default_values)
@@ -535,7 +557,7 @@ class TracIniAdminPanel(Component):
       reason = 'None specified'
     return is_valid, reason
 
-  def _apply_section_changes(self, req, section_name, options):
+  def _apply_section_changes(self, req, config, section_name, options):
     values_applied = False #indicates whether at least one value has been set
     
     for option_name, option in options.items():
@@ -548,14 +570,14 @@ class TracIniAdminPanel(Component):
         #
         # The option shall use its default value
         #
-        if self.config.has_option(section_name, option_name):
+        if config.has_option(section_name, option_name):
           is_valid, reason = self._is_option_value_valid(section_name, option_name, option['default_value'])
           if not is_valid:
             add_warning(req, _('The default value for option "%s" in section "%s" is invalid. Reason: %s' % (option_name, section_name, reason)))
             continue
           
           self.log.info("Removing option: [" + section_name + "] " + option_name)
-          self.config.remove(section_name, option_name)
+          config.remove(section_name, option_name)
           
           # Check whether the option was actually removed (i.e. reset to its 
           # default value). The option can't be removed if it's set in a parent
@@ -565,10 +587,10 @@ class TracIniAdminPanel(Component):
           #   parent trac.ini as well as in the project's trac ini with a 
           #   non-default value. Because of this we need to recheck against the
           #   default value here.
-          if self.config.has_option(section_name, option_name) and \
-             self.config.get(section_name, option_name) != option['default_value']:
+          if config.has_option(section_name, option_name) and \
+             config.get(section_name, option_name) != option['default_value']:
             self.log.info("Removing options failed. Option may be inherited. Settings default value explicitly: " + str(option['default_value']))
-            self.config.set(section_name, option_name, option['default_value'])
+            config.set(section_name, option_name, option['default_value'])
       else:
         #
         # The option shall use the specified value
@@ -584,7 +606,7 @@ class TracIniAdminPanel(Component):
             continue
           
           self.log.info("Setting option: [" + section_name + "] " + option_name + " to: " + option['value'])
-          self.config.set(section_name, option_name, option['value'])
+          config.set(section_name, option_name, option['value'])
           
       option['stored_value'] = option['value']
       

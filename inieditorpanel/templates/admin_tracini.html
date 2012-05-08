@@ -19,7 +19,8 @@
     <h2>Edit Trac Settings (trac.ini)</h2>
 
     <p class="help">
-      Allows you to edit the trac.ini file.<br/><i>Note:</i> To "delete" an option from the trac.ini file, just set it to its default value.
+      Allows you to edit the trac.ini and syllabuses configuration files.<br/>
+      <i>Note:</i> To "delete" an option from the configuration file, just set it to its default value.
     </p>
     
     <div id="select_section_form">
@@ -159,6 +160,8 @@
                           | <b>Currently stored value:</b> ${(option.stored_value and option.stored_value != option.default_value and (len(unicode(option.stored_value)) &lt; 100 and option.stored_value or (option.stored_value[:100] + '...'))) or '&lt;default value&gt;'} 
                         </py:otherwise>
                       </py:choose>
+                      | <b>Custom option:</b> ${option.custom and 'yes' or 'no'} 
+                      | <b>With switcher:</b> ${option.switcher and 'yes' or 'no'} 
                     </span>
                   </td>
                 </tr>
